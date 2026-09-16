@@ -64,3 +64,14 @@ Add this to `.github/workflows/design-review.yml`:
 ## License
 
 MPL-2.0
+
+## Required workflow permissions
+
+The action needs these permissions to post PR comments:
+
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+
+Without them, the checks and reports still run, but the PR comment will fail with a 403.
