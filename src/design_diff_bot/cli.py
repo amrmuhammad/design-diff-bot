@@ -1,4 +1,5 @@
 """Command-line interface for design-diff-bot."""
+
 from __future__ import annotations
 
 import sys
@@ -23,13 +24,15 @@ def main() -> None:
     default=".",
 )
 @click.option(
-    "--output", "-o",
+    "--output",
+    "-o",
     type=click.Path(path_type=Path),
     default=Path("design-diff-report.json"),
     help="Path to write the JSON report.",
 )
 @click.option(
-    "--markdown", "-m",
+    "--markdown",
+    "-m",
     type=click.Path(path_type=Path),
     default=None,
     help="Optional path to write a Markdown report (for PR comments).",
@@ -62,12 +65,12 @@ def check(
 
     if not results["kicad_cli_available"]:
         click.echo(
-            "⚠️  kicad-cli is not installed. "
-            "Reports will be empty. Install KiCad 8+ to run checks."
+            "⚠️  kicad-cli is not installed. Reports will be empty. Install KiCad 8+ to run checks."
         )
 
-    total = sum(e["violation_count"] for e in results["schematics"]) + \
-            sum(e["violation_count"] for e in results["pcbs"])
+    total = sum(e["violation_count"] for e in results["schematics"]) + sum(
+        e["violation_count"] for e in results["pcbs"]
+    )
 
     to_json(results, output)
     click.echo(f"📄 JSON report written to {output}")

@@ -1,4 +1,5 @@
 """Tests for the design-diff-bot runner and reporter."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -11,6 +12,7 @@ from design_diff_bot.runner import (
 )
 
 # ---------- find_kicad_files ----------
+
 
 def test_find_kicad_files_empty(tmp_path: Path) -> None:
     files = find_kicad_files(tmp_path)
@@ -50,6 +52,7 @@ def test_find_kicad_files_recurses(tmp_path: Path) -> None:
 
 # ---------- run_all_checks ----------
 
+
 def test_run_all_checks_no_files(tmp_path: Path) -> None:
     results = run_all_checks(tmp_path)
     assert results["schematics"] == []
@@ -72,6 +75,7 @@ def test_run_all_checks_without_kicad_cli(tmp_path: Path) -> None:
 
 
 # ---------- to_markdown ----------
+
 
 def test_to_markdown_clean() -> None:
     results = {

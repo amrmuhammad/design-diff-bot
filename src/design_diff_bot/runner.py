@@ -1,4 +1,5 @@
 """Core engine: runs KiCad ERC/DRC and returns structured results."""
+
 from __future__ import annotations
 
 import json
@@ -63,11 +64,14 @@ def run_erc(schematic_file: Path) -> CheckResult:
 
     returncode, stdout, stderr = _run_kicad_cli(
         [
-            "sch", "erc",
-            "--format", "json",
+            "sch",
+            "erc",
+            "--format",
+            "json",
             "--severity-all",
             "--exit-code-violations",
-            "--output", "-",
+            "--output",
+            "-",
             str(schematic_file),
         ]
     )
@@ -100,11 +104,14 @@ def run_drc(pcb_file: Path) -> CheckResult:
 
     returncode, stdout, stderr = _run_kicad_cli(
         [
-            "pcb", "drc",
-            "--format", "json",
+            "pcb",
+            "drc",
+            "--format",
+            "json",
             "--severity-all",
             "--exit-code-violations",
-            "--output", "-",
+            "--output",
+            "-",
             str(pcb_file),
         ]
     )
