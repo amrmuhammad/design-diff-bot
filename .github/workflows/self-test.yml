@@ -1,0 +1,40 @@
+name: Self-test (real KiCad)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'action.yml'
+      - '.github/workflows/self-test.yml'
+      - 'examples/**'
+  workflow_dispatch:   # allows manual trigger from the Actions tab
+
+jobs:
+  action-smoke-test:
+    name: Run the action against a minimal schematic
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Verify KiCad installs and CLI is available (fast debug signal)
+      - name: Verify KiCad CLI (via action)
+        id: kicad-check
+        uses: ./
+        with:
+          directory: examples/minimal
+          fail-on-violations: 'false'
+
+      - name: Show action outputs
+        run: |
+          echo "Report path:     ${{ steps.kicad-check.outputs.report-path }}"
+          echo "Violation count: ${{ steps.kicad-check.outputs.violation-count }}"
+
+      - name: Show generated report
+        run: |
+          echo "----- design-diff-report.json -----"
+          cat design-diff-report.json || echo "(no JSON report)"
+          echo ""
+          echo "----- design-diff-report.md -----"
+          cat design-diff-report.md || echo "(no Markdown report)"
+
