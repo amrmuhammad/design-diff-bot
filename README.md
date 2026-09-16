@@ -7,7 +7,6 @@ CI/CD for KiCad designs. Runs ERC/DRC checks on every pull request and posts a s
 [![CI](https://github.com/amrmuhammad/design-diff-bot/actions/workflows/ci.yml/badge.svg)](https://github.com/amrmuhammad/design-diff-bot/actions/workflows/ci.yml)
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL_2.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
 [![PyPI version](https://img.shields.io/pypi/v/design-diff-bot.svg)](https://pypi.org/project/design-diff-bot/)
-[![PyPI downloads](https://img.shields.io/pypi/dm/design-diff-bot.svg)](https://pypi.org/project/design-diff-bot/)
 [![Python versions](https://img.shields.io/pypi/pyversions/design-diff-bot.svg)](https://pypi.org/project/design-diff-bot/)
 
 ## What it does
