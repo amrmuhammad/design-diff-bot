@@ -9,6 +9,8 @@ from design_diff_bot.runner import (
     find_kicad_files,
     kicad_cli_available,
     run_all_checks,
+    run_drc,
+    run_erc,
 )
 
 # ---------- find_kicad_files ----------
@@ -137,3 +139,117 @@ def test_to_markdown_kicad_missing() -> None:
     md = to_markdown(results)
     assert "kicad-cli" in md
     assert "was not found" in md
+
+
+# ---------- run_erc / run_drc violation parsing ----------
+
+import json as _json
+from unittest.mock import patch as _patch
+
+
+def _fake_kicad_json(violations):
+    return _json.dumps({"violations": violations})
+
+
+def test_run_erc_parses_violations(tmp_path):
+    """ERC exit code 5 = violations found. Verify they're parsed."""
+    fake = _fake_kicad_json(
+        [
+            {
+                "severity": "error",
+                "type": "pin_not_connected",
+                "description": "Pin not connected",
+                "items": [{"description": "U1 pin 5"}],
+            },
+            {
+                "severity": "warning",
+                "type": "power_pin_not_driven",
+                "description": "Power pin not driven",
+                "items": [],
+            },
+        ]
+    )
+    with (
+        _patch("design_diff_bot.runner.kicad_cli_available", return_value=True),
+        _patch("design_diff_bot.runner._run_kicad_cli", return_value=(5, fake, "")),
+    ):
+        result = run_erc(tmp_path / "board.kicad_sch")
+
+    assert result.success is False
+    assert len(result.violations) == 2
+    assert result.violations[0]["type"] == "pin_not_connected"
+    assert result.violations[1]["severity"] == "warning"
+    assert result.error is None
+
+
+def test_run_erc_clean(tmp_path):
+    """ERC exit code 0 = clean."""
+    with (
+        _patch("design_diff_bot.runner.kicad_cli_available", return_value=True),
+        _patch("design_diff_bot.runner._run_kicad_cli", return_value=(0, "", "")),
+    ):
+        result = run_erc(tmp_path / "board.kicad_sch")
+
+    assert result.success is True
+    assert result.violations == []
+    assert result.error is None
+
+
+def test_run_erc_handles_malformed_json(tmp_path):
+    """kicad-cli returned garbage - should not crash, violations = []."""
+    with (
+        _patch("design_diff_bot.runner.kicad_cli_available", return_value=True),
+        _patch("design_diff_bot.runner._run_kicad_cli", return_value=(5, "not json at all", "")),
+    ):
+        result = run_erc(tmp_path / "board.kicad_sch")
+
+    assert result.violations == []
+    assert result.success is False
+
+
+def test_run_erc_handles_cli_error(tmp_path):
+    """kicad-cli returned a hard error code (e.g., 1)."""
+    with (
+        _patch("design_diff_bot.runner.kicad_cli_available", return_value=True),
+        _patch("design_diff_bot.runner._run_kicad_cli", return_value=(1, "", "some error")),
+    ):
+        result = run_erc(tmp_path / "board.kicad_sch")
+
+    assert result.success is False
+    assert result.error == "some error"
+    assert result.violations == []
+
+
+def test_run_drc_parses_violations(tmp_path):
+    """DRC exit code 5 = violations found."""
+    fake = _fake_kicad_json(
+        [
+            {
+                "severity": "error",
+                "type": "clearance",
+                "description": "Clearance violation",
+                "items": [],
+            }
+        ]
+    )
+    with (
+        _patch("design_diff_bot.runner.kicad_cli_available", return_value=True),
+        _patch("design_diff_bot.runner._run_kicad_cli", return_value=(5, fake, "")),
+    ):
+        result = run_drc(tmp_path / "board.kicad_pcb")
+
+    assert result.success is False
+    assert len(result.violations) == 1
+    assert result.violations[0]["type"] == "clearance"
+
+
+def test_run_drc_clean(tmp_path):
+    """DRC exit code 0 = clean."""
+    with (
+        _patch("design_diff_bot.runner.kicad_cli_available", return_value=True),
+        _patch("design_diff_bot.runner._run_kicad_cli", return_value=(0, "", "")),
+    ):
+        result = run_drc(tmp_path / "board.kicad_pcb")
+
+    assert result.success is True
+    assert result.violations == []
