@@ -1,0 +1,104 @@
+name: 'design-diff-bot'
+description: 'Run KiCad ERC/DRC checks on pull requests and post a design review comment.'
+author: 'Amr Muhammad'
+
+branding:
+  icon: 'cpu'
+  color: 'blue'
+
+inputs:
+  directory:
+    description: 'Directory to scan for KiCad files.'
+    required: false
+    default: '.'
+  fail-on-violations:
+    description: 'Fail the check if violations are found.'
+    required: false
+    default: 'false'
+  kicad-version:
+    description: 'KiCad version to install (e.g., 8.0).'
+    required: false
+    default: '8.0'
+
+outputs:
+  report-path:
+    description: 'Path to the generated JSON report.'
+    value: ${{ steps.run-check.outputs.report-path }}
+  violation-count:
+    description: 'Total number of violations found.'
+    value: ${{ steps.run-check.outputs.violation-count }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install KiCad
+      shell: bash
+      run: |
+        sudo add-apt-repository --yes ppa:kicad/kicad-${{ inputs.kicad-version }}-releases
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends kicad
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install design-diff-bot
+      shell: bash
+      run: pip install "${{ github.action_path }}"
+
+    - name: Run checks
+      id: run-check
+      shell: bash
+      run: |
+        set -e
+        ARGS=("${{ inputs.directory }}" --output design-diff-report.json --markdown design-diff-report.md)
+        if [ "${{ inputs.fail-on-violations }}" = "true" ]; then
+          ARGS+=(--fail-on-violations)
+        fi
+        design-diff-bot check "${ARGS[@]}"
+        echo "report-path=design-diff-report.json" >> "$GITHUB_OUTPUT"
+        VIOLATIONS=$(python -c "import json; d=json.load(open('design-diff-report.json')); print(sum(e['violation_count'] for e in d['schematics']+d['pcbs']))")
+        echo "violation-count=$VIOLATIONS" >> "$GITHUB_OUTPUT"
+
+    - name: Upload report artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: design-diff-report
+        path: |
+          design-diff-report.json
+          design-diff-report.md
+
+    - name: Post PR comment
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const md = fs.readFileSync('design-diff-report.md', 'utf8');
+          const marker = '<!-- design-diff-bot -->';
+          const body = `${marker}\n${md}`;
+
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+
+          const existing = comments.find(c => c.body.includes(marker));
+
+          if (existing) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: existing.id,
+              body,
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+          }
